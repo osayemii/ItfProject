@@ -26,8 +26,15 @@ jobs:
       working-directory: ./frontend
       run: npm run build
 
+    - name: List contents of dist folder (debugging)
+      working-directory: ./frontend/dist
+      run: ls -la
+
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./frontend/dist  # Vite outputs to 'dist'
+        destination_dir: .  # Ensure files are placed in the root of gh-pages branch
+        force_orphan: true  # Force a clean deployment, ensures branch is created
+        keep_files: false  # Remove any existing files in the branch
