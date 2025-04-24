@@ -28,13 +28,57 @@ const bankList = [
   'Wema Bank',
 ];
 
+// Mock data for submitted users (in a real app, this would come from a backend)
+const mockSubmittedUsers = [
+  {
+    id: 1,
+    nameOfStudent: 'John Doe',
+    matricNumber: 'CS/2020/001',
+    studentEmailAddress: 'john.doe@example.com',
+    courseOfStudy: 'Computer Science',
+    levelOfStudy: '300',
+    periodOfAttachmentFrom: '2025-01-01',
+    periodOfAttachmentTo: '2025-06-30',
+    placementOfAddress: '123 Tech Street, Lagos',
+    bankCode: '044',
+    bankName: 'Access Bank',
+    accountHolderName: 'John Doe',
+    accountNumber: '1234567890',
+    sortCode: '044150',
+    siwesYear: '2025',
+    remarks: 'Good candidate',
+    status: 'Pending',
+    submissionDate: '2025-04-20',
+  },
+  {
+    id: 2,
+    nameOfStudent: 'Jane Smith',
+    matricNumber: 'EE/2020/002',
+    studentEmailAddress: 'jane.smith@example.com',
+    courseOfStudy: 'Electrical Engineering',
+    levelOfStudy: '400',
+    periodOfAttachmentFrom: '2025-02-01',
+    periodOfAttachmentTo: '2025-07-31',
+    placementOfAddress: '456 Power Road, Abuja',
+    bankCode: '058',
+    bankName: 'Guaranty Trust Bank (GTB)',
+    accountHolderName: 'Jane Smith',
+    accountNumber: '0987654321',
+    sortCode: '058150',
+    siwesYear: '2025',
+    remarks: 'Excellent performance',
+    status: 'Pending',
+    submissionDate: '2025-04-21',
+  },
+];
+
 // AuthScreen Component for Login/Register
 const AuthScreen = ({ onLogin, onRegister }) => {
-  const [isLogin, setIsLogin] = useState(true); // Toggle between login and register
+  const [isLogin, setIsLogin] = useState(true);
   const [authData, setAuthData] = useState({
     email: '',
     password: '',
-    name: '', // For registration
+    name: '',
   });
   const [errors, setErrors] = useState({});
 
@@ -142,8 +186,221 @@ const AuthScreen = ({ onLogin, onRegister }) => {
   );
 };
 
+// AdminScreen Component for Viewing Submissions
+const AdminScreen = ({ submittedUsers, onApprove }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState('submissionDate');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  // Filter and sort users
+  const filteredUsers = submittedUsers
+    .filter((user) => {
+      const query = searchQuery.toLowerCase();
+      return (
+        user.nameOfStudent.toLowerCase().includes(query) ||
+        user.matricNumber.toLowerCase().includes(query) ||
+        user.studentEmailAddress.toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => {
+      const fieldA = a[sortField] ? a[sortField].toString().toLowerCase() : '';
+      const fieldB = b[sortField] ? b[sortField].toString().toLowerCase() : '';
+      if (sortOrder === 'asc') {
+        return fieldA > fieldB ? 1 : -1;
+      }
+      return fieldA < fieldB ? 1 : -1;
+    });
+
+  // Handle sorting
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  // Download CSV
+  const downloadCSV = () => {
+    const headers = [
+      'Name',
+      'Matric Number',
+      'Email',
+      'Course of Study',
+      'Status',
+      'Submission Date',
+      'Level of Study',
+      'Period of Attachment (From)',
+      'Period of Attachment (To)',
+      'Placement Address',
+      'Bank Code',
+      'Bank Name',
+      'Account Holder Name',
+      'Account Number',
+      'Sort Code',
+      'SIWES Year',
+      'Remarks',
+    ];
+    const rows = submittedUsers.map((user) => [
+      user.nameOfStudent,
+      user.matricNumber,
+      user.studentEmailAddress,
+      user.courseOfStudy,
+      user.status,
+      user.submissionDate,
+      user.levelOfStudy,
+      user.periodOfAttachmentFrom,
+      user.periodOfAttachmentTo,
+      user.placementOfAddress,
+      user.bankCode,
+      user.bankName,
+      user.accountHolderName,
+      user.accountNumber,
+      user.sortCode,
+      user.siwesYear,
+      user.remarks || '',
+    ]);
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'siwes_submissions.csv';
+    link.click();
+  };
+
+  return (
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Admin: Submitted Applications</h2>
+        <button
+          onClick={downloadCSV}
+          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+        >
+          Download CSV
+        </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search by name, matric number, or email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-200">
+              {[
+                { label: 'Name', field: 'nameOfStudent' },
+                { label: 'Matric Number', field: 'matricNumber' },
+                { label: 'Email', field: 'studentEmailAddress' },
+                { label: 'Course', field: 'courseOfStudy' },
+                { label: 'Status', field: 'status' },
+                { label: 'Submission Date', field: 'submissionDate' },
+              ].map(({ label, field }) => (
+                <th
+                  key={field}
+                  onClick={() => handleSort(field)}
+                  className="p-2 text-left cursor-pointer hover:bg-gray-300"
+                >
+                  {label}
+                  {sortField === field && (
+                    <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((user, index) => (
+              <tr
+                key={user.id}
+                onClick={() => setSelectedUser(user)}
+                className={`cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100`}
+              >
+                <td className="p-2">{user.nameOfStudent}</td>
+                <td className="p-2">{user.matricNumber}</td>
+                <td className="p-2">{user.studentEmailAddress}</td>
+                <td className="p-2">{user.courseOfStudy}</td>
+                <td className="p-2">{user.status}</td>
+                <td className="p-2">{user.submissionDate}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal for Full Details */}
+      {selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-bold mb-4">Application Details</h3>
+            <div className="mb-4">
+              <h4 className="font-semibold text-gray-700">Basic Information</h4>
+              <p className="text-gray-600">Name: {selectedUser.nameOfStudent}</p>
+              <p className="text-gray-600">Matric Number: {selectedUser.matricNumber}</p>
+              <p className="text-gray-600">Email: {selectedUser.studentEmailAddress}</p>
+            </div>
+            <div className="mb-4">
+              <h4 className="font-semibold text-gray-700">Academic Details</h4>
+              <p className="text-gray-600">Course of Study: {selectedUser.courseOfStudy}</p>
+              <p className="text-gray-600">Level of Study: {selectedUser.levelOfStudy}</p>
+              <p className="text-gray-600">SIWES Year: {selectedUser.siwesYear}</p>
+            </div>
+            <div className="mb-4">
+              <h4 className="font-semibold text-gray-700">Placement Details</h4>
+              <p className="text-gray-600">Period of Attachment (From): {selectedUser.periodOfAttachmentFrom}</p>
+              <p className="text-gray-600">Period of Attachment (To): {selectedUser.periodOfAttachmentTo}</p>
+              <p className="text-gray-600">Placement Address: {selectedUser.placementOfAddress}</p>
+              <p className="text-gray-600">Bank Code: {selectedUser.bankCode}</p>
+              <p className="text-gray-600">Account Number: {selectedUser.accountNumber}</p>
+              <p className="text-gray-600">Bank Name: {selectedUser.bankName}</p>
+              <p className="text-gray-600">Account Holder Name: {selectedUser.accountHolderName}</p>
+              <p className="text-gray-600">Sort Code: {selectedUser.sortCode}</p>
+              <p className="text-gray-600">Remarks: {selectedUser.remarks || 'None'}</p>
+              <p className="text-gray-600">Status: {selectedUser.status}</p>
+              <p className="text-gray-600">Submission Date: {selectedUser.submissionDate}</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              {selectedUser.status === 'Pending' && (
+                <button
+                  onClick={() => {
+                    onApprove(selectedUser.id);
+                    setSelectedUser({ ...selectedUser, status: 'Approved' });
+                  }}
+                  className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition"
+                >
+                  Approve
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Mock auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // Mock admin state
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     nameOfStudent: '',
@@ -162,6 +419,7 @@ function App() {
     studentEmailAddress: '',
     remarks: '',
   });
+  const [submittedUsers, setSubmittedUsers] = useState(mockSubmittedUsers);
   const [errors, setErrors] = useState({});
   const [bankSearch, setBankSearch] = useState('');
   const [filteredBanks, setFilteredBanks] = useState(bankList);
@@ -171,20 +429,27 @@ function App() {
   const handleLogin = (authData) => {
     console.log('Login:', authData);
     setIsLoggedIn(true);
-    setStep(1); // Redirect to form after login
+    // Mock admin check: if email is 'admin@example.com', set as admin
+    if (authData.email === 'admin@example.com') {
+      setIsAdmin(true);
+      setStep(7); // Redirect to admin screen
+    } else {
+      setStep(1); // Redirect to form
+    }
   };
 
   // Mock register function
   const handleRegister = (authData) => {
     console.log('Register:', authData);
     setIsLoggedIn(true);
-    setStep(1); // Redirect to form after registration
+    setStep(1);
   };
 
   // Logout function
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setStep(1); // Reset to initial state
+    setIsAdmin(false);
+    setStep(1);
     setFormData({
       nameOfStudent: '',
       matricNumber: '',
@@ -202,6 +467,17 @@ function App() {
       studentEmailAddress: '',
       remarks: '',
     });
+  };
+
+  // Approve application
+  const handleApprove = (userId) => {
+    setSubmittedUsers(
+      submittedUsers.map((user) =>
+        user.id === userId ? { ...user, status: 'Approved' } : user
+      )
+    );
+    // In a real app, this would update the backend
+    console.log(`Approved application for user ID: ${userId}`);
   };
 
   useEffect(() => {
@@ -278,6 +554,16 @@ function App() {
 
   const handleSubmit = () => {
     setStep(5);
+    // Add the submitted form to the submittedUsers list
+    setSubmittedUsers([
+      ...submittedUsers,
+      {
+        ...formData,
+        id: submittedUsers.length + 1,
+        status: 'Pending',
+        submissionDate: new Date().toISOString().split('T')[0], // Today's date
+      },
+    ]);
     console.log(formData);
     setTimeout(() => {
       setStep(6);
@@ -300,6 +586,10 @@ function App() {
   const renderStep = () => {
     if (!isLoggedIn) {
       return <AuthScreen onLogin={handleLogin} onRegister={handleRegister} />;
+    }
+
+    if (isAdmin && step === 7) {
+      return <AdminScreen submittedUsers={submittedUsers} onApprove={handleApprove} />;
     }
 
     switch (step) {
@@ -430,7 +720,7 @@ function App() {
       case 3:
         return (
           <div className="w-full max-w-2xl mx-auto">
-            <h2 className="text-xl sm: text-2xl font-bold mb-4 text-gray-800">Placement Details</h2>
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 text-gray-800">Placement Details</h2>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Period of Attachment (From)</label>
               <input
@@ -738,6 +1028,22 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center space-x-4">
+          {isLoggedIn && !isAdmin && (
+            <button
+              onClick={() => setStep(6)}
+              className="text-blue-500 hover:text-blue-600 font-medium"
+            >
+              View Status
+            </button>
+          )}
+          {isLoggedIn && isAdmin && (
+            <button
+              onClick={() => setStep(7)}
+              className="text-blue-500 hover:text-blue-600 font-medium"
+            >
+              Admin Dashboard
+            </button>
+          )}
           {isLoggedIn ? (
             <button
               onClick={handleLogout}
@@ -759,8 +1065,8 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 w-full flex items-start justify-center p-2 sm:p-4">
         <div className="w-full h-full bg-white p-4 sm:p-6 rounded-lg shadow-lg flex flex-col">
-          {/* Horizontal Step Indicators (Hidden on Auth, Success, and Approval Screens) */}
-          {isLoggedIn && step < 5 && (
+          {/* Horizontal Step Indicators (Hidden on Auth, Success, Approval, and Admin Screens) */}
+          {isLoggedIn && !isAdmin && step < 5 && (
             <div className="flex justify-center overflow-x-auto mb-4 sm:mb-6">
               <div className="flex space-x-2 sm:space-x-4">
                 <StepIndicator currentStep={step} stepNumber={1} label="Basic Information" />
